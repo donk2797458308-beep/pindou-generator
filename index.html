@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no"/>
-<title>拼豆图纸生成器 | 像素画图纸转换器 | 拼豆图片生成器</title>
+<title>pindoudou | 拼豆图纸生成器</title>
 <meta name="description" content="上传图片，调整精细度，一键生成像素画图纸，简单实用的像素画生成工具"/>
 <style>
 :root{
@@ -25,6 +25,8 @@ body{
 }
 .brand{display:flex;align-items:center;gap:10px}
 .brand .name{font-size:16px;font-weight:600;letter-spacing:.5px}
+.brand .contact{font-size:12px;color:var(--sub);text-decoration:none}
+.brand .contact:hover{color:var(--text)}
 .header-actions{display:flex;gap:8px}
 .btn{
   border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;
@@ -213,7 +215,8 @@ select{
 <div class="app" id="app">
   <header class="header">
     <div class="brand">
-      <div class="name">拼豆图纸生成器</div>
+      <div class="name">pindoudou</div>
+      <a class="contact" href="mailto:2797458308@qq.com">2797458308@qq.com</a>
     </div>
     <div class="header-actions">
       <button class="btn" id="btnUploadHeader">上传图片</button>
@@ -262,15 +265,21 @@ select{
           <option value="strong-merge" title="强化色彩合并">预设 3</option>
           <option value="palette" title="纯色板映射">预设 4</option>
         </select>
+        <div class="size-presets" id="paramPresets" style="margin-bottom:10px">
+          <button class="preset" data-merge="25" data-cap="12">简约</button>
+          <button class="preset" data-merge="15" data-cap="30">标准</button>
+          <button class="preset" data-merge="5" data-cap="45">精细</button>
+          <button class="preset active" data-custom="1">自定义</button>
+        </div>
         <div class="row" style="margin-top:12px">
           <label>颜色合并值</label>
-          <input type="range" id="mergeRange" min="0" max="100" value="30"/>
+          <input type="range" id="mergeRange" min="0" max="30" value="30"/>
           <span class="val" id="mergeVal">30</span>
         </div>
         <div class="row">
           <label>颜色上限</label>
-          <input type="range" id="colorLimit" min="1" max="100" value="80"/>
-          <span class="val" id="colorLimitVal">80</span>
+          <input type="range" id="colorLimit" min="8" max="45" value="30"/>
+          <span class="val" id="colorLimitVal">30</span>
           <button class="btn" id="btnColorLimitToggle" style="padding:6px 10px;font-size:12px">不限</button>
         </div>
       </div>
@@ -344,7 +353,7 @@ select{
     </aside>
   </div>
 
-  <footer class="footer">拼豆图纸生成器 · 上传图片，一键生成像素画图纸</footer>
+  <footer class="footer">pindoudou · 上传图片，一键生成像素画图纸</footer>
 </div>
 
 <!-- 导出图纸页(复刻原站) -->
@@ -475,7 +484,7 @@ select{
 <script>
 'use strict';
 /* ============================================================
- * 拼豆图纸生成器 1:1 复刻版
+ * pindoudou 拼豆图纸生成器
  * 算法与导出渲染还原自原站 bundle
  * ============================================================ */
 
@@ -1182,13 +1191,39 @@ document.getElementById('btnSizeApply').addEventListener('click', ()=>{
 
 /* 模式/合并/色板 (含实时预览) */
 document.getElementById('modeSelect').addEventListener('change', ()=>{ scheduleReprocess && scheduleReprocess(); });
-document.getElementById('mergeRange').addEventListener('input', e=>{ document.getElementById('mergeVal').textContent=e.target.value; scheduleReprocess && scheduleReprocess(); });
-document.getElementById('colorLimit').addEventListener('input', e=>{ document.getElementById('colorLimitVal').textContent=e.target.value; scheduleReprocess && scheduleReprocess(); });
+function markCustomParams(){
+  document.querySelectorAll('#paramPresets .preset').forEach(b=>{
+    b.classList.toggle('active', !!b.dataset.custom);
+  });
+}
+document.getElementById('mergeRange').addEventListener('input', e=>{ document.getElementById('mergeVal').textContent=e.target.value; markCustomParams(); scheduleReprocess && scheduleReprocess(); });
+document.getElementById('colorLimit').addEventListener('input', e=>{ document.getElementById('colorLimitVal').textContent=e.target.value; markCustomParams(); scheduleReprocess && scheduleReprocess(); });
 document.getElementById('btnColorLimitToggle').addEventListener('click', function(){
   colorLimitEnabled = !colorLimitEnabled;
   this.textContent = colorLimitEnabled ? '不限' : '开启';
   document.getElementById('colorLimit').disabled = colorLimitEnabled;
   scheduleReprocess && scheduleReprocess();
+});
+/* 参数预设: 简约 / 标准 / 精细 / 自定义 */
+function setParamPreset(merge, cap, isCustom){
+  if(merge !== null) document.getElementById('mergeRange').value = merge;
+  if(cap !== null) document.getElementById('colorLimit').value = cap;
+  document.getElementById('mergeVal').textContent = document.getElementById('mergeRange').value;
+  document.getElementById('colorLimitVal').textContent = document.getElementById('colorLimit').value;
+  colorLimitEnabled = true;   // 预设显式设定颜色上限, 恢复开关
+  const tg = document.getElementById('btnColorLimitToggle');
+  tg.textContent = '不限';
+  document.getElementById('colorLimit').disabled = false;
+  document.querySelectorAll('#paramPresets .preset').forEach(b=>{
+    b.classList.toggle('active', isCustom ? !!b.dataset.custom : !b.dataset.custom);
+  });
+  scheduleReprocess && scheduleReprocess();
+}
+document.querySelectorAll('#paramPresets .preset').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    if(b.dataset.custom){ setParamPreset(null, null, true); return; }
+    setParamPreset(parseInt(b.dataset.merge,10), parseInt(b.dataset.cap,10), false);
+  });
 });
 document.getElementById('brandSelect').addEventListener('change', e=>{
   currentBrand=e.target.value;
