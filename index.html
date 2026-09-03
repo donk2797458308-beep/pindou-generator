@@ -48,8 +48,10 @@ body{
 .upload-zone .icon svg{width:28px;height:28px;stroke:var(--primary)}
 .upload-zone .tip{font-size:14px;font-weight:600}
 .upload-zone .sub{font-size:12px;color:var(--sub);margin-top:6px}
-.canvas-wrap{display:none;background:#fff;border-radius:var(--radius);padding:12px;overflow:auto;min-height:300px;max-height:calc(100vh - 160px)}
+.canvas-wrap{display:none;position:relative;background:#fff;border-radius:var(--radius);padding:12px;overflow:auto;min-height:300px;max-height:calc(100vh - 160px)}
 .canvas-wrap canvas{display:block;margin:0 auto;max-width:100%;image-rendering:pixelated}
+.btn-reset-image{position:absolute;top:16px;right:16px;z-index:5;background:#fff;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.08);padding:6px 12px;font-size:12px;color:var(--text)}
+.btn-reset-image:hover{border-color:#999}
 .sidebar{display:flex;flex-direction:column;gap:14px}
 .panel{background:#fff;border-radius:var(--radius);padding:18px 16px;border:1px solid #f0f0f0}
 .panel h3{font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
@@ -234,6 +236,7 @@ select{
         <div class="sub">支持 JPG、PNG 图片，也可导入 CSV 数据文件</div>
       </div>
       <div class="canvas-wrap" id="canvasWrap">
+        <button class="btn btn-reset-image" id="btnResetImage" type="button">清除图片 · 重新放置</button>
         <canvas id="previewCanvas"></canvas>
       </div>
       <input type="file" id="fileInput" accept="image/jpeg,image/png,.csv,text/csv,text/plain" style="display:none"/>
@@ -1124,6 +1127,22 @@ function reprocess(){
 /* 上传: 图片先进入裁剪弹窗 */
 document.getElementById('uploadZone').addEventListener('click', ()=>document.getElementById('fileInput').click());
 document.getElementById('btnUploadHeader').addEventListener('click', ()=>document.getElementById('fileInput').click());
+/* 清除图片/画布, 重新放置 */
+document.getElementById('btnResetImage').addEventListener('click', ()=>{
+  processGen++;                      // 取消未决的异步处理, 防止旧结果回填
+  if(processTimer) clearTimeout(processTimer);
+  currentImage = null;
+  currentGrid = null;
+  currentDim = null;
+  const cv = document.getElementById('previewCanvas');
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  document.getElementById('stats').innerHTML = '';
+  document.getElementById('legend').innerHTML = '';
+  document.getElementById('canvasWrap').style.display = 'none';
+  document.getElementById('uploadZone').style.display = '';
+  toast('已清除, 可重新放置图片');
+});
 document.getElementById('fileInput').addEventListener('change', e=>{
   const file=e.target.files && e.target.files[0];
   if(!file) return;
@@ -1841,35 +1860,52 @@ document.getElementById('btnMyProjects').addEventListener('click', ()=>{
   showDraftsModal(list);
 });
 function showDraftsModal(list){
+  // 移除可能残留的历史弹窗, 防止叠加
+  document.querySelectorAll('#draftsModalLayer').forEach(el=>el.remove());
   const backdrop=document.createElement('div');
+  backdrop.id='draftsModalLayer';
   backdrop.className='modal-backdrop';
   backdrop.style.cssText='display:flex;z-index:300';
   const items=list.map((d,i)=>{
-    const date=new Date(d.savedAt);
-    const ds=date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate()+' '+date.getHours()+':'+String(date.getMinutes()).padStart(2,'0');
+    let ds='';
+    try{
+      const date=new Date(d.savedAt);
+      if(!isNaN(date.getTime())) ds=date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate()+' '+date.getHours()+':'+String(date.getMinutes()).padStart(2,'0');
+    }catch(e){}
     return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px">'+
       '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">'+escapeHtml(d.title)+'</div>'+
-      '<div style="font-size:11px;color:var(--sub)">'+d.N+'×'+d.M+' · '+d.brand+' · '+ds+'</div></div>'+
+      '<div style="font-size:11px;color:var(--sub)">'+d.N+'×'+d.M+' · '+(d.brand||'')+' · '+ds+'</div></div>'+
       '<button class="btn" data-load="'+i+'" style="padding:6px 12px">打开</button>'+
       '<button class="btn" data-del="'+i+'" style="padding:6px 12px;background:#fee2e2;color:#e5484d">删除</button></div>';
   }).join('');
   backdrop.innerHTML='<div class="modal crop-modal" style="max-width:520px">'+
-    '<div class="modal-head"><h3>历史记录 (本地草稿 '+list.length+')</h3><button class="modal-close" data-close>✕</button></div>'+
-    '<div class="modal-body" style="max-height:60vh;overflow-y:auto">'+items+'</div>'+
+    '<div class="modal-head"><h3>历史记录 (本地草稿 '+list.length+')</h3><button class="modal-close" data-close aria-label="关闭">✕</button></div>'+
+    '<div class="modal-body" style="max-height:60vh;overflow-y:auto">'+(items||'<div style="padding:12px;color:var(--sub);font-size:13px">暂无草稿</div>')+'</div>'+
     '<div class="modal-foot"><button class="btn" data-close>关闭</button></div></div>';
   document.body.appendChild(backdrop);
+  function onKey(e){ if(e.key==='Escape') close(); }
+  function close(){
+    document.removeEventListener('keydown', onKey);
+    backdrop.remove();
+  }
+  document.addEventListener('keydown', onKey);
   backdrop.addEventListener('click', e=>{
-    if(e.target===backdrop || e.target.dataset.close){ backdrop.remove(); return; }
-    if(e.target.dataset.load!==undefined){
-      const d=list[+e.target.dataset.load];
-      loadDraft(d);
-      backdrop.remove();
+    if(e.target===backdrop){ close(); return; }
+    const closeBtn=e.target.closest('[data-close]');
+    if(closeBtn){ close(); return; }
+    const loadBtn=e.target.closest('[data-load]');
+    if(loadBtn){
+      const d=list[+loadBtn.dataset.load];
+      if(d){ try{ loadDraft(d); }catch(err){ console.error('加载草稿失败', err); toast('加载草稿失败'); } }
+      close();   // 无论成败都关闭, 避免卡在弹窗里
+      return;
     }
-    if(e.target.dataset.del!==undefined){
-      const i=+e.target.dataset.del;
+    const delBtn=e.target.closest('[data-del]');
+    if(delBtn){
+      const i=+delBtn.dataset.del;
       const nl=list.filter((_,x)=>x!==i);
       saveDrafts(nl);
-      backdrop.remove();
+      close();
       showDraftsModal(loadDrafts());
       toast('已删除草稿');
     }

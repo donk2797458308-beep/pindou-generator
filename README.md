@@ -40,13 +40,16 @@
 
 ## 部署
 
-纯静态站,已通过 GitHub Pages 发布(分支部署: main 根目录):
+纯静态站,已发布到 GitHub Pages + EdgeOne。**本仓库是唯一代码源**:
 
 ```bash
 # 本地直接使用: 双击 index.html(全部功能离线可用)
-# 更新线上: 修改后提交推送即可, Pages 自动重建
+# 更新线上: 修改后提交推送即可
 git add -A && git commit -m "update" && git push
 ```
+
+- **GitHub Pages**(分支部署 main 根目录): push 后自动重建
+- **EdgeOne Pages**: 若已在 EdgeOne 控制台关联本 GitHub 仓库, push 后自动同步;若是手动上传的,请把更新后的文件(通常只有 `index.html`)重新上传覆盖
 
 ## 验证
 
