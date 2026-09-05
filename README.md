@@ -40,16 +40,20 @@
 
 ## 部署
 
-纯静态站,已发布到 GitHub Pages + EdgeOne。**本仓库是唯一代码源**:
+纯静态站。**本仓库是唯一代码源**,修改后提交推送即可:
 
 ```bash
-# 本地直接使用: 双击 index.html(全部功能离线可用)
-# 更新线上: 修改后提交推送即可
 git add -A && git commit -m "update" && git push
 ```
 
-- **GitHub Pages**(分支部署 main 根目录): push 后自动重建
-- **EdgeOne Pages**: 若已在 EdgeOne 控制台关联本 GitHub 仓库, push 后自动同步;若是手动上传的,请把更新后的文件(通常只有 `index.html`)重新上传覆盖
+当前线上地址(国内直连,免费,免备案):
+
+| 平台 | 地址 | 更新方式 |
+|---|---|---|
+| **CloudBase 静态托管**(腾讯云,国内访问推荐) | https://adda121-d2gazlq3lbb603c1a-1479385958.tcloudbaseapp.com | `tcb hosting deploy <目录> -e adda121-d2gazlq3lbb603c1a` 或控制台上传 |
+| GitHub Pages(国际访问) | https://donk2797458308-beep.github.io/pindou-generator/ | push 自动重建 |
+
+> CloudBase 环境为体验版(免费),有效期至 2027-03-05,到期前需在腾讯云控制台续期或更换套餐。
 
 ## 验证
 
